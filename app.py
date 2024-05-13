@@ -50,33 +50,46 @@ def books():
         return "Error inserting data into database", 500
         
 
-# @app.route('/books/<int:id>',methods=['GET','PUT','DELETE'])
-# def index(id):
-#     if request.method == 'GET':
-#         for book in books_list:
-#             if book['id'] == id:
-#                 return jsonify(book)
-#         return 'Book not found', 404
-#     elif request.method == 'PUT':
-#         for book in books_list:
-#             if book['id'] == id:
-#                 book['title'] = request.form.get('title')
-#                 book['author'] = request.form.get('author')
-#                 book['read'] = request.form.get('read')
-#                 updated_book = {
-#                     'id': id,
-#                     'title': book['title'],
-#                     'author': book['author'],
-#                     'read': book['read']
-#                 }
-#                 return jsonify(updated_book)
-#         return 'Book not found', 404
-#     elif request.method == 'DELETE':
-#         for book in books_list:
-#             if book['id'] == id:
-#                 books_list.remove(book)
-#                 return jsonify(books_list)
-#         return 'Book not found', 404
+@app.route('/books/<int:id>',methods=['GET','PUT','DELETE'])
+def index(id):
+     con=connexion_db()
+     cursor=con.cursor()
+     cursor.execute('SELECT * FROM books_listt') 
+     book=None
+     if request.method == 'GET':
+        cursor.execute('SELECT * FROM books_listt WHERE id = %s', (id,))
+        book = cursor.fetchone()
+        if book is not None:
+            return jsonify({'id': book[0], 'title': book[1], 'author': book[2], 'read': book[3]}), 200
+        else:
+            return 'Book not found', 404
+    
+     elif request.method == 'PUT':
+        newtitle = request.form.get('title')
+        newauthor = request.form.get('author')
+        newread = request.form.get('read')
+
+        if newtitle is None or newauthor is None or newread is None:
+            return "Missing required fields", 400
+
+        try:
+            sql = '''UPDATE books_listt SET title = %s, author = %s, read = %s WHERE id = %s'''
+            cursor.execute(sql, (newtitle, newauthor, newread, id))
+            con.commit()
+            return "Book updated successfully", 200
+        except psycopg2.Error as e:
+            print(f"Error updating data in database: {e}")
+            return "Error updating data in database", 500
+    
+     elif request.method == 'DELETE':
+        try:
+            sql = '''DELETE FROM books_listt WHERE id = %s'''
+            cursor.execute(sql, (id,))
+            con.commit()
+            return '', 204
+        except psycopg2.Error as e:
+            print(f"Error deleting data from database: {e}")
+            return "Error deleting data from database", 500
 if __name__ == '__main__':
     app.run(debug=True)
      
